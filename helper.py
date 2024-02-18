@@ -52,18 +52,30 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
         str(dst), 
         str(check_sum),
         str(overwrite)))
-    exit_early = False
 
     # check if src and dst are absolute paths
     if not src.is_absolute():
-        logger.warn("src directory is not an absolute path")
-        exit_early = True
+        logger.warn("src path is not an absolute path; attempting to resolve...")
+        try:
+            src = src.resolve(strict=True)
+            logger.warn('src resolved to:\n{}'.format(str(src)))
+        except FileNotFoundError as file_not_found_e:
+            logger.error('path does not exist...\n{}'.format(file_not_found_e))
+        except RuntimeError as runtime_e:
+            logger.error('runtime error...\n{}'.format(runtime_e))
+        except Exception as e:
+            logger.critical(e)
     if not dst.is_absolute():
-        logger.warn("dst directory is not an absolute path")
-        exit_early = True
-    
-    if exit_early:
-        return None
+        logger.warn("dst path is not an absolute path; attempting to resolve...")
+        try:
+            dst = dst.resolve(strict=True)
+            logger.warn('dst resolved to:\n{}'.format(str(dst)))
+        except FileNotFoundError as file_not_found_e:
+            logger.error('path does not exist...\n{}'.format(file_not_found_e))
+        except RuntimeError as runtime_e:
+            logger.error('runtime error...\n{}'.format(runtime_e))
+        except Exception as e:
+            logger.critical(e)
 
     dst_full = dst.joinpath(src.name)
     if not dst_full.exists() or overwrite:

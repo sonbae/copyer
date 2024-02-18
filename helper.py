@@ -3,6 +3,7 @@ from shutil import copytree, copy2
 import time
 import logging
 import hashlib
+from typing import NamedTuple
 
 from log import CustomFormatter
 
@@ -21,6 +22,11 @@ logger.addHandler(consoleHandler)
 logger.debug('initialized')
 
 NO_TAR = ['.zip', '.tar.gz', '.tar', '.mp4', '.mkv']
+
+
+class ResponseMsg(NamedTuple):
+    success: bool
+    msg: str
 
 
 def time_me(func):
@@ -45,20 +51,20 @@ def find_me_sha256(path: Path) -> str:
     return checksum.hexdigest()
 
 
-def resolve_path(path: Path) -> tuple[Path, str]:
+def resolve_path(path: Path) -> tuple[ResponseMsg, Path]:
     try:
         resolved_path = path.resolve(strict=True)
         logger.info('resolved path: {}'.format(str(resolved_path)))
-        returnable = (resolved_path, '')
+        returnable = (ResponseMsg(True, ''), resolved_path)
     except FileNotFoundError as file_not_found_e:
         logger.error('path does not exist...\n{}'.format(file_not_found_e))
-        returnable = (resolved_path, "FileNotFoundError") 
+        returnable = (ResponseMsg(False, "FileNotFoundError"), path) 
     except RuntimeError as runtime_e:
         logger.error('runtime error...\n{}'.format(runtime_e))
-        returnable = (resolved_path, "RuntimeError") 
+        returnable = (ResponseMsg(False, "RuntimeError"), path) 
     except Exception as e:
         logger.critical(e)
-        returnable = (resolved_path, "ABORT! ABORT!") 
+        returnable = (ResponseMsg(False, "ABORT! ABORT!"), path) 
     return returnable
 
 
@@ -71,10 +77,10 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
         str(overwrite)))
 
     # resolves src/dst paths and returns error if needed
-    src, err_src = resolve_path(src)
-    dst, err_dst = resolve_path(dst)
-    if not err_src or not err_dst:
-        return 'src: {}\ndst: {}\n'.format(err_src, err_dst)
+    src_rsp, src = resolve_path(src)
+    dst_rsp, dst = resolve_path(dst)
+    if not src_rsp.success or not dst_rsp.success:
+        return '-- src:\nmessage: {}\npath: {}\n-- dst:\nmessage: {}\npath: {}\n'.format(src_rsp.msg, src, dst_rsp.msg, dst)
 
     # check to see if dst provides filename already
     if dst.name == '':
@@ -167,7 +173,9 @@ def copy_files(srcs: list[Path], dst: Path, src_root: Path, check_sum: bool = Fa
         
         # copy file
         try:
-            bad_file = copy_file(src, new_dst, check_sum, overwrite)
+            err = copy_file(src, new_dst, check_sum, overwrite)
+            if not err:
+                logger.warning(err)
         except Exception as e:
             logger.critical(e)
             return

@@ -72,10 +72,11 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
 
 @time_me
 def copy_files(srcs: list[Path], dst: Path, src_root: Path, check_sum: bool = False, overwrite: bool = False) -> None:
-    logger.debug('copy_files(\nsrc: {}\ndst: {}\nchecksum: {})'.format(
+    logger.debug('copy_files(\nsrc: {}\ndst: {}\nchecksum: {}\noverwrite: {})'.format(
         "\n".join(list(map(lambda x: str(x), srcs))), 
         str(dst), 
-        str(src_root)))
+        str(src_root),
+        str(overwrite)))
     exit_early = False
 
     def not_abs(x):

@@ -125,7 +125,7 @@ def copy_files(srcs: list[Path], dst: Path, src_root: Path, check_sum: bool = Fa
             new_dst.mkdir(parents=True, exist_ok=False) 
             logger.info('created directory: {}'.format(str(new_dst)))
         except FileExistsError as file_exists:
-            logger.warning(file_exists)
+            logger.debug(file_exists)
         except Exception as e:
             logger.critical(e)
             return

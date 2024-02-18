@@ -69,7 +69,7 @@ def resolve_path(path: Path) -> tuple[ResponseMsg, Path]:
 
 
 @time_me
-def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = False) -> str:
+def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = False) -> ResponseMsg:
     logger.debug('copy_file(\nsrc: {}\ndst: {}\nchecksum: {}\noverwrite: {})'.format(
         str(src), 
         str(dst), 
@@ -80,13 +80,15 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
     src_rsp, src = resolve_path(src)
     dst_rsp, dst = resolve_path(dst)
     if not src_rsp.success or not dst_rsp.success:
-        return '-- src:\nmessage: {}\npath: {}\n-- dst:\nmessage: {}\npath: {}\n'.format(src_rsp.msg, src, dst_rsp.msg, dst)
+        return ResponseMsg(False, '-- src:\nmessage: {}\npath: {}\n-- dst:\nmessage: {}\npath: {}\n'.format(src_rsp.msg, src, dst_rsp.msg, dst))
 
     # check to see if dst provides filename already
-    if dst.name == '':
+    if dst.is_dir():
         dst_full = dst.joinpath(src.name)
     else:
         dst_full = dst
+    
+    logger.debug('dst_full: {}'.format(str(dst_full)))
 
     if not dst_full.exists() or overwrite:
         try:
@@ -94,7 +96,7 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
             logger.info('copied: {}'.format(str(dst_full)))
         except Exception as e:
             logger.critical(e)
-            return "ABORT! ABORT!"
+            return ResponseMsg(False, "ABORT! ABORT!")
     else:
         logger.warning('file already exists: {}'.format(str(dst_full)))
 
@@ -108,9 +110,9 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
         else:
             # TODO: try recopying? 
             logger.warning('diff hash') 
-            return "Mismatch Hash"
-
-    return None
+            return ResponseMsg(False, "Mismatch Hash")
+        
+    return ResponseMsg(True, 'success')
 
 
 @time_me
@@ -173,9 +175,10 @@ def copy_files(srcs: list[Path], dst: Path, src_root: Path, check_sum: bool = Fa
         
         # copy file
         try:
-            err = copy_file(src, new_dst, check_sum, overwrite)
-            if not err:
-                logger.warning(err)
+            rsp = copy_file(src, new_dst, check_sum, overwrite)
+            logger.debug(rsp)
+            if not rsp.success:
+                logger.warning(rsp.msg)
         except Exception as e:
             logger.critical(e)
             return

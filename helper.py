@@ -4,16 +4,18 @@ import time
 import logging
 import hashlib
 
-logFormat = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
+from log import CustomFormatter
+
+simpleLogFormat = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 fileHandler = logging.FileHandler('app.log')
-fileHandler.setFormatter(logFormat)
+fileHandler.setFormatter(simpleLogFormat)
 logger.addHandler(fileHandler)
 
 consoleHandler = logging.StreamHandler()
-consoleHandler.setFormatter(logFormat)
+consoleHandler.setFormatter(CustomFormatter())
 logger.addHandler(consoleHandler)
 
 logger.debug('initialized')
@@ -51,17 +53,17 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
     dst_full = dst.joinpath(src.name)
     if not dst_full.exists() or overwrite:
         try:
-            dst_ret = copy2(src, dst) 
-            logger.info('copied: {}'.format(str(dst_ret)))
+            copy2(src, dst_full) 
+            logger.info('copied: {}'.format(str(dst_full)))
         except Exception as e:
             logger.critical(e)
     else:
         logger.info('file already exists: {}'.format(str(dst_full)))
 
     if check_sum:
-        orig_hash = hashlib.file_digest(open(src, 'rb'), 'sha256').digest()
+        orig_hash = hashlib.sha256(open(src, 'rb').read()).hexdigest()
         logger.info('hash: {}'.format(orig_hash))
-        copy_hash = hashlib.file_digest(open(dst_ret, 'rb'), 'sha256').digest()
+        copy_hash = hashlib.sha256(open(dst_full, 'rb').read()).hexdigest()
 
         if orig_hash == copy_hash:
             logger.info('same hash')

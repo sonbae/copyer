@@ -22,6 +22,7 @@ logger.debug('initialized')
 
 NO_TAR = ['.zip', '.tar.gz', '.tar', '.mp4', '.mkv']
 
+
 def time_me(func):
     def wrapper(*args, **kwargs):
         t1 = time.time()
@@ -29,6 +30,20 @@ def time_me(func):
         t2 = time.time()
         logger.info('executing time: ' + str(t2-t1))
     return wrapper
+
+
+# https://stackoverflow.com/questions/1131220/get-the-md5-hash-of-big-files-in-python
+def find_me_sha256(path: Path) -> str:
+    BLOCK_SIZE = 2**32 # TODO: arbitrary; might find a better value later 
+    checksum = hashlib.sha256()
+    with open(path, 'rb') as f:
+        while True:
+            buffer = f.read(BLOCK_SIZE)
+            if not buffer:
+                break
+            checksum.update(buffer)
+    return checksum.hexdigest()
+
 
 @time_me
 def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = False) -> None:
@@ -60,17 +75,20 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
     else:
         logger.info('file already exists: {}'.format(str(dst_full)))
 
-    if check_sum:
-        orig_hash = hashlib.sha256(open(src, 'rb').read()).hexdigest()
+    if check_sum: 
+        orig_hash = find_me_sha256(src)
         logger.info('hash: {}'.format(orig_hash))
-        copy_hash = hashlib.sha256(open(dst_full, 'rb').read()).hexdigest()
+        copy_hash = find_me_sha256(dst_full)
 
         if orig_hash == copy_hash:
             logger.info('same hash')
         else:
-            logger.warning('diff hash') # TODO: try recopying?
+            # TODO: try recopying? 
+            # TODO: definitely should at least return the paths that are mismatched
+            logger.warning('diff hash') 
 
     return
+
 
 @time_me
 def copy_files(srcs: list[Path], dst: Path, src_root: Path, check_sum: bool = False, overwrite: bool = False) -> None:

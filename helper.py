@@ -32,9 +32,10 @@ class ResponseMsg(NamedTuple):
 def time_me(func):
     def wrapper(*args, **kwargs):
         t1 = time.time()
-        func(*args, **kwargs)
+        result = func(*args, **kwargs)
         t2 = time.time()
         logger.info('executing time: ' + str(t2-t1))
+        return result
     return wrapper
 
 

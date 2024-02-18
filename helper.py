@@ -34,7 +34,7 @@ def time_me(func):
 
 # https://stackoverflow.com/questions/1131220/get-the-md5-hash-of-big-files-in-python
 def find_me_sha256(path: Path) -> str:
-    BLOCK_SIZE = 2**32 # TODO: arbitrary; might find a better value later 
+    BLOCK_SIZE = 2**24 # TODO: arbitrary; might find a better value later 
     checksum = hashlib.sha256()
     with open(path, 'rb') as f:
         while True:
@@ -46,7 +46,7 @@ def find_me_sha256(path: Path) -> str:
 
 
 @time_me
-def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = False) -> None:
+def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = False) -> Path:
     logger.debug('copy_file(\nsrc: {}\ndst: {}\nchecksum: {}\noverwrite: {})'.format(
         str(src), 
         str(dst), 
@@ -63,7 +63,7 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
         exit_early = True
     
     if exit_early:
-        return
+        return None
 
     dst_full = dst.joinpath(src.name)
     if not dst_full.exists() or overwrite:
@@ -72,8 +72,9 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
             logger.info('copied: {}'.format(str(dst_full)))
         except Exception as e:
             logger.critical(e)
+            return src
     else:
-        logger.info('file already exists: {}'.format(str(dst_full)))
+        logger.warning('file already exists: {}'.format(str(dst_full)))
 
     if check_sum: 
         orig_hash = find_me_sha256(src)
@@ -84,10 +85,10 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
             logger.info('same hash')
         else:
             # TODO: try recopying? 
-            # TODO: definitely should at least return the paths that are mismatched
             logger.warning('diff hash') 
+            return src
 
-    return
+    return None
 
 
 @time_me
@@ -150,7 +151,7 @@ def copy_files(srcs: list[Path], dst: Path, src_root: Path, check_sum: bool = Fa
         
         # copy file
         try:
-            copy_file(src, new_dst, check_sum, overwrite)
+            bad_file = copy_file(src, new_dst, check_sum, overwrite)
         except Exception as e:
             logger.critical(e)
             return

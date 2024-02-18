@@ -1,5 +1,5 @@
 from pathlib import Path
-from shutil import copytree, copy2
+from shutil import copy2
 import time
 import logging
 import hashlib
@@ -112,7 +112,9 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
             logger.warning('diff hash') 
             return ResponseMsg(False, "Mismatch Hash")
         
-    return ResponseMsg(True, 'success')
+    resp = ResponseMsg(True, 'success')
+    logger.debug(resp)
+    return resp
 
 
 @time_me

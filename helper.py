@@ -45,33 +45,36 @@ def find_me_sha256(path: Path) -> str:
     return checksum.hexdigest()
 
 
+def resolve_path(path: Path) -> tuple[Path, str]:
+    try:
+        resolved_path = path.resolve(strict=True)
+        logger.info('resolved path: {}'.format(str(resolved_path)))
+        returnable = (resolved_path, '')
+    except FileNotFoundError as file_not_found_e:
+        logger.error('path does not exist...\n{}'.format(file_not_found_e))
+        returnable = (resolved_path, "FileNotFoundError") 
+    except RuntimeError as runtime_e:
+        logger.error('runtime error...\n{}'.format(runtime_e))
+        returnable = (resolved_path, "RuntimeError") 
+    except Exception as e:
+        logger.critical(e)
+        returnable = (resolved_path, "ABORT! ABORT!") 
+    return returnable
+
+
 @time_me
-def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = False) -> Path:
+def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = False) -> str:
     logger.debug('copy_file(\nsrc: {}\ndst: {}\nchecksum: {}\noverwrite: {})'.format(
         str(src), 
         str(dst), 
         str(check_sum),
         str(overwrite)))
 
-    try:
-        src = src.resolve(strict=True)
-        logger.info('resolved src: {}'.format(str(src)))
-    except FileNotFoundError as file_not_found_e:
-        logger.error('path does not exist...\n{}'.format(file_not_found_e))
-    except RuntimeError as runtime_e:
-        logger.error('runtime error...\n{}'.format(runtime_e))
-    except Exception as e:
-        logger.critical(e)
-
-    try:
-        dst = dst.resolve(strict=True)
-        logger.info('resolved dst: {}'.format(str(dst)))
-    except FileNotFoundError as file_not_found_e:
-        logger.error('path does not exist...\n{}'.format(file_not_found_e))
-    except RuntimeError as runtime_e:
-        logger.error('runtime error...\n{}'.format(runtime_e))
-    except Exception as e:
-        logger.critical(e)
+    # resolves src/dst paths and returns error if needed
+    src, err_src = resolve_path(src)
+    dst, err_dst = resolve_path(dst)
+    if not err_src or not err_dst:
+        return 'src: {}\ndst: {}\n'.format(err_src, err_dst)
 
     # check to see if dst provides filename already
     if dst.name == '':
@@ -85,7 +88,7 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
             logger.info('copied: {}'.format(str(dst_full)))
         except Exception as e:
             logger.critical(e)
-            return src
+            return "ABORT! ABORT!"
     else:
         logger.warning('file already exists: {}'.format(str(dst_full)))
 
@@ -99,7 +102,7 @@ def copy_file(src: Path, dst: Path, check_sum: bool = False, overwrite: bool = F
         else:
             # TODO: try recopying? 
             logger.warning('diff hash') 
-            return src
+            return "Mismatch Hash"
 
     return None
 
